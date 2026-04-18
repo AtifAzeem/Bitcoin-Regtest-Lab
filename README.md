@@ -1,6 +1,6 @@
 # ₿ Bitcoin Regtest Lab
 
-A local Bitcoin development environment where you can explore blocks, manage wallets, send transactions, and even mine blocks — all in one place.
+A local Bitcoin development environment where you can explore blocks, manage wallets, send transactions, and mine blocks — all in one place.
 
 ---
 
@@ -13,7 +13,7 @@ It includes:
 * a simple **block explorer**
 * a **wallet interface**
 * **mempool + transaction tracking**
-* and a **CLI-style interaction layer**
+* a **CLI-style interaction layer**
 
 ---
 
@@ -25,7 +25,7 @@ It includes:
 * 📤 Send & receive Bitcoin (regtest)
 * ⛏️ Mine blocks instantly
 * 🧱 View UTXOs
-* ⌨️ Run Bitcoin RPC commands from UI
+* ⌨️ Run Bitcoin RPC commands from the UI
 
 ---
 
@@ -42,11 +42,11 @@ It includes:
 
 ### Dashboard
 
-![Dashboard](assets/Dashboard.png)
+![Dashboard](assets/dashboard.png)
 
 ### Explorer
 
-![Explorer](assets/Explorer.png)
+![Explorer](assets/explorer.png)
 
 ### Wallet
 
@@ -82,7 +82,9 @@ Install it on your system.
 
 ## 2️⃣ Create Bitcoin Config File
 
-Create a file named `bitcoin.conf` inside any data directory (e.g., `D:\ProgramFiles\Bitcoin\data`)
+Create a file named `bitcoin.conf` inside your data directory
+(e.g., `D:\ProgramFiles\Bitcoin\data`)
+
 Make sure the file is saved with a `.conf` extension.
 
 Add the following:
@@ -98,10 +100,15 @@ rpcpassword=bitcoin123
 rpcport=18443
 rpcallowip=127.0.0.1
 ```
+
 (Optional) If transactions fail due to fee estimation, add:
+
 ```conf
 fallbackfee=0.0001
 ```
+
+This is only for regtest and should not be used in production.
+
 ---
 
 ## 3️⃣ Start Bitcoin in Regtest Mode
@@ -112,11 +119,30 @@ Update the paths according to your installation and run:
 D:\file-path\bitcoin-qt.exe --regtest -datadir=D:\file-path\data
 ```
 
-This will start a local Bitcoin node in **regtest mode**.
+This starts a local Bitcoin node in **regtest mode**.
 
 ---
 
-## 4️⃣ Start Backend Server
+## 4️⃣ Configure Backend Environment
+
+Create a `.env` file inside the `backend/` folder:
+
+```env
+RPC_HOST=127.0.0.1
+RPC_PORT=18443
+RPC_USER=bitcoin
+RPC_PASS=bitcoin123
+```
+
+These values must match your `bitcoin.conf` file.
+
+💡 Note:
+The `.env` file is not included in the repository.
+Refer to `.env.example` for the required structure.
+
+---
+
+## 5️⃣ Start Backend Server
 
 ```bash
 cd backend
@@ -132,7 +158,7 @@ Bitcoin Lab Backend running on http://localhost:3001
 
 ---
 
-## 5️⃣ Open the Frontend
+## 6️⃣ Open the Frontend
 
 Open this file in your browser:
 
@@ -142,22 +168,22 @@ frontend/index.html
 
 ---
 
-## 6️⃣ First-Time Setup (Important)
+## 7️⃣ First-Time Setup
 
 * Create a wallet from the UI
 * Mine at least **101 blocks** to get usable balance
-* Now you can:
+* You can now:
 
   * send transactions
   * explore blocks
-  * view mempool
+  * view the mempool
 
 ---
 
 ## ⚠️ Notes
 
 * Works only on **Bitcoin Regtest**
-* Make sure backend and Bitcoin node are running at the same time
+* Ensure both the backend and Bitcoin node are running simultaneously
 * RPC credentials must match `bitcoin.conf`
 
 ---
@@ -170,7 +196,7 @@ Atif Azeem
 
 ## 💭 thoughts
 
-* built this to understand how bitcoin actually works instead of just reading theory  
+* built this to understand how bitcoin actually works instead of just reading theory
 * still improving it as i learn more
 
 ---
