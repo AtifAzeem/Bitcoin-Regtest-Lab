@@ -114,6 +114,7 @@ This is only for regtest and should not be used in production.
 ## 3️⃣ Start Bitcoin in Regtest Mode
 
 Update the paths according to your installation and run:
+
 Press win+R and then run this command
 ```bash
 D:\file-path\bitcoin-qt.exe --regtest -datadir=D:\file-path\data
