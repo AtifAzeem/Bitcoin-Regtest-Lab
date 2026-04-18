@@ -4,10 +4,10 @@ Local Bitcoin explorer + wallet + mining dashboard for Regtest
 ## 📸 Screenshots
 
 ### Dashboard
-![Dashboard](assets/dashboard.png)
+![Dashboard](assets/Dashboard.png)
 
 ### Explorer
-![Explorer](assets/explorer.png)
+![Explorer](assets/Explorer.png)
 
 ### Wallet
 ![Wallet](assets/wallet.png)
