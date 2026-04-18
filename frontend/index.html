@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bitcoin Regtest Lab</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #0d0f14;
+    --bg2:      #13161e;
+    --bg3:      #1a1e28;
+    --border:   #252a38;
+    --accent:   #f7931a;
+    --accent2:  #ffb347;
+    --green:    #00d68f;
+    --red:      #ff4757;
+    --blue:     #4e9eff;
+    --purple:   #a78bfa;
+    --text:     #e8ecf4;
+    --muted:    #6b7494;
+    --font:     'Courier New', monospace;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; min-height: 100vh; overflow-x: hidden; }
+
+  /* ── Layout ───────────────────────────────────── */
+  #app { display: flex; flex-direction: column; height: 100vh; }
+  header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 20px; display: flex; align-items: center; gap: 16px; height: 52px; flex-shrink: 0; }
+  .logo { font-size: 18px; font-weight: bold; color: var(--accent); letter-spacing: 1px; }
+  .logo span { color: var(--text); }
+  .badge { background: var(--accent); color: #000; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; }
+  #status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-left: auto; transition: background .3s; }
+  #status-dot.ok { background: var(--green); }
+  #status-text { font-size: 11px; color: var(--muted); }
+
+  nav { background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; padding: 0 20px; gap: 4px; flex-shrink: 0; overflow-x: auto; }
+  nav button { background: none; border: none; color: var(--muted); padding: 12px 16px; cursor: pointer; font-family: var(--font); font-size: 12px; white-space: nowrap; border-bottom: 2px solid transparent; transition: all .2s; }
+  nav button:hover { color: var(--text); }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  main { flex: 1; overflow-y: auto; padding: 20px; }
+
+  /* ── Cards & Grid ─────────────────────────────── */
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .card-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .card-title .icon { font-size: 14px; }
+  .stat-val { font-size: 22px; font-weight: bold; color: var(--text); }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .accent { color: var(--accent); }
+  .green  { color: var(--green); }
+  .red    { color: var(--red); }
+  .blue   { color: var(--blue); }
+  .purple { color: var(--purple); }
+  .muted  { color: var(--muted); }
+  h2 { font-size: 15px; margin-bottom: 16px; color: var(--text); }
+  h3 { font-size: 13px; margin-bottom: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── Table ────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { color: var(--muted); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid #1c1f2b; vertical-align: middle; }
+  tr:hover td { background: var(--bg3); }
+  .mono { font-family: var(--font); }
+  .hash { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; color: var(--blue); }
+  .hash:hover { text-decoration: underline; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+  .pill-green { background: rgba(0,214,143,.15); color: var(--green); }
+  .pill-orange { background: rgba(247,147,26,.15); color: var(--accent); }
+  .pill-blue { background: rgba(78,158,255,.15); color: var(--blue); }
+  .pill-red { background: rgba(255,71,87,.15); color: var(--red); }
+
+  /* ── Inputs & Buttons ────────────────────────── */
+  input, select, textarea { background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: 12px; padding: 9px 12px; border-radius: 6px; outline: none; transition: border-color .2s; width: 100%; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-row { margin-bottom: 14px; }
+  .btn { background: var(--accent); color: #000; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; font-family: var(--font); font-size: 12px; font-weight: bold; transition: opacity .2s; }
+  .btn:hover { opacity: .85; }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn-outline { background: none; border: 1px solid var(--accent); color: var(--accent); }
+  .btn-outline:hover { background: rgba(247,147,26,.1); }
+  .btn-green  { background: var(--green); }
+  .btn-red    { background: var(--red); }
+  .btn-blue   { background: var(--blue); }
+  .btn-sm     { padding: 5px 12px; font-size: 11px; }
+  .btn-row    { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+  /* ── CLI Panel ────────────────────────────────── */
+  #cli-section { display: flex; flex-direction: column; height: calc(100vh - 104px); }
+  #cli-output { flex: 1; background: #080a0f; border: 1px solid var(--border); border-radius: 8px; overflow-y: auto; padding: 14px; font-size: 12px; line-height: 1.6; margin-bottom: 12px; }
+  .cli-line { margin: 2px 0; }
+  .cli-cmd  { color: var(--accent); }
+  .cli-res  { color: var(--green); white-space: pre-wrap; word-break: break-all; }
+  .cli-err  { color: var(--red); }
+  .cli-info { color: var(--muted); }
+  #cli-form { display: flex; gap: 8px; }
+  #cli-input { flex: 1; font-size: 13px; padding: 10px 14px; }
+  .cli-prompt { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .cli-prompt label { color: var(--accent); font-size: 12px; white-space: nowrap; margin: 0; text-transform: none; }
+  .cli-prompt select { width: auto; padding: 5px 10px; font-size: 12px; }
+  .cli-shortcuts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .cli-shortcut { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: all .15s; }
+  .cli-shortcut:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── QR placeholder ──────────────────────────── */
+  .qr-box { background: white; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 10px; color: #333; text-align: center; padding: 6px; word-break: break-all; margin: 10px auto; }
+
+  /* ── Wallet Selector ─────────────────────────── */
+  #wallet-bar { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  #wallet-bar label { white-space: nowrap; margin: 0; }
+  #wallet-select { width: 200px; }
+
+  /* ── Notification ─────────────────────────────── */
+  #notif { position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .notif { background: var(--bg2); border-left: 3px solid var(--green); padding: 12px 18px; border-radius: 6px; font-size: 12px; box-shadow: 0 4px 20px #0008; animation: slideIn .2s ease; pointer-events: auto; max-width: 340px; }
+  .notif.err { border-color: var(--red); }
+  .notif.warn { border-color: var(--accent); }
+  @keyframes slideIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
+
+  /* ── Loader ───────────────────────────────────── */
+  .loader { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Misc ─────────────────────────────────────── */
+  .section { margin-bottom: 24px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .copy-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 6px; }
+  .copy-btn:hover { color: var(--accent); }
+  .addr-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 11px; word-break: break-all; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); padding: 7px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+  .empty { text-align: center; color: var(--muted); padding: 40px; font-size: 13px; }
+  .utxo-badge { font-size: 10px; }
+
+  /* ── Mine Quick Panel ─────────────────────────── */
+  .mine-panel { background: linear-gradient(135deg, #1a1500, #1a0d00); border: 1px solid #3a2800; border-radius: 10px; padding: 16px; }
+  .mine-panel h3 { color: var(--accent); }
+
+  /* ── Scrollbars ───────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ── Pages ────────────────────────────────────── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  @media (max-width: 600px) {
+    main { padding: 12px; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">₿<span>TC</span> Regtest Lab</div>
+    <div class="badge">Regtest</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <span id="status-text">Connecting…</span>
+      <div id="status-dot"></div>
+    </div>
+  </header>
+
+  <!-- ── Nav ── -->
+  <nav>
+    <button class="active" onclick="showPage('dashboard')">📊 Dashboard</button>
+    <button onclick="showPage('explorer')">🔍 Explorer</button>
+    <button onclick="showPage('mempool')">⏳ Mempool</button>
+    <button onclick="showPage('wallet')">💼 Wallet</button>
+    <button onclick="showPage('send')">📤 Send</button>
+    <button onclick="showPage('receive')">📥 Receive</button>
+    <button onclick="showPage('utxo')">🧱 UTXOs</button>
+    <button onclick="showPage('cli')">⌨️ CLI</button>
+  </nav>
+
+  <main>
+
+  <!-- ════════════════ DASHBOARD ════════════════ -->
+  <div id="page-dashboard" class="page active">
+    <div class="grid grid-4 section">
+      <div class="card">
+        <div class="card-title"><span class="icon">🧱</span> Block Height</div>
+        <div class="stat-val accent" id="d-height">—</div>
+        <div class="stat-sub" id="d-chain">chain: —</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="icon">⏳</span> Mempool</div>
+        <div class="stat-val blue" id="d-mempool-count">—</div>
+        <div class="stat-sub" id="d-mempool-size">— bytes</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="icon">⚡</span> Difficulty</div>
+        <div class="stat-val purple" id="d-difficulty">—</div>
+        <div class="stat-sub">Proof of Work</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="icon">📡</span> Verification</div>
+        <div class="stat-val green" id="d-verify">—%</div>
+        <div class="stat-sub" id="d-pruned">full node</div>
+      </div>
+    </div>
+
+    <div class="grid grid-2 section">
+      <div class="mine-panel">
+        <h3>⛏ Quick Mine (Regtest)</h3>
+        <p style="color:var(--muted);font-size:11px;margin-bottom:12px">Generate blocks instantly to confirm transactions</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn btn-sm" onclick="quickMine(1)">Mine 1</button>
+          <button class="btn btn-sm" onclick="quickMine(6)">Mine 6</button>
+          <button class="btn btn-sm" onclick="quickMine(10)">Mine 10</button>
+          <button class="btn btn-sm" onclick="quickMine(100)">Mine 100</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input type="number" id="mine-custom-n" placeholder="N blocks" style="width:120px" />
+          <select id="mine-wallet-select" style="width:160px"></select>
+          <button class="btn" onclick="quickMineCustom()">Mine</button>
+        </div>
+        <div id="mine-result" style="margin-top:10px;font-size:11px;color:var(--green)"></div>
+      </div>
+      <div class="card">
+        <h3>📦 Latest Blocks</h3>
+        <div id="d-latest-blocks">
+          <div class="empty">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ EXPLORER ════════════════ -->
+  <div id="page-explorer" class="page">
+    <div class="section">
+      <h2>🔍 Block Explorer</h2>
+      <div style="display:flex;gap:8px;margin-bottom:20px">
+        <input id="explorer-query" placeholder="Block hash, block height, or transaction ID…" style="flex:1" />
+        <button class="btn" onclick="explorerLookup()">Search</button>
+      </div>
+      <div id="explorer-result"></div>
+    </div>
+
+    <div class="section">
+      <h2>📦 Recent Blocks</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Height</th><th>Hash</th><th>Time</th><th>Txs</th><th>Size</th>
+          </tr></thead>
+          <tbody id="blocks-tbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ MEMPOOL ════════════════ -->
+  <div id="page-mempool" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2>⏳ Mempool Monitor</h2>
+      <button class="btn btn-outline btn-sm" onclick="loadMempool()">↺ Refresh</button>
+    </div>
+    <div class="grid grid-3 section" id="mempool-stats">
+      <div class="card">
+        <div class="card-title">Pending Transactions</div>
+        <div class="stat-val blue" id="mp-count">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Total Size</div>
+        <div class="stat-val accent" id="mp-size">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Total Fees</div>
+        <div class="stat-val green" id="mp-fees">—</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>TXID</th><th>Fee (BTC)</th><th>Fee Rate (sat/vB)</th><th>Size</th><th>Time in Pool</th><th>Depends</th>
+        </tr></thead>
+        <tbody id="mempool-tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════ WALLET ════════════════ -->
+  <div id="page-wallet" class="page">
+    <div id="wallet-bar">
+      <label>Active Wallet:</label>
+      <select id="wallet-select" onchange="onWalletChange()"></select>
+      <button class="btn btn-sm" onclick="loadWallets()">↺</button>
+      <div style="display:flex;gap:6px;margin-left:8px">
+        <input id="new-wallet-name" placeholder="wallet name…" style="width:160px" />
+        <button class="btn btn-sm btn-green" onclick="createWallet()">+ Create</button>
+      </div>
+    </div>
+
+    <div class="grid grid-2 section">
+      <div class="card" style="border-color:var(--accent)">
+        <div class="card-title"><span class="icon">💰</span> Balance</div>
+        <div class="stat-val accent" id="w-balance">— BTC</div>
+        <div class="stat-sub" id="w-unconfirmed">Unconfirmed: — BTC</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="icon">📋</span> Wallet Info</div>
+        <div id="w-info" style="font-size:11px;line-height:1.8;color:var(--muted)">—</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📜 Transaction History</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Type</th><th>Amount</th><th>Address</th><th>Confirmations</th><th>TXID</th><th>Time</th>
+          </tr></thead>
+          <tbody id="w-tx-tbody"><tr><td colspan="6" class="empty">Select a wallet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ SEND ════════════════ -->
+  <div id="page-send" class="page">
+    <h2>📤 Send Bitcoin</h2>
+    <div class="grid grid-2">
+      <div class="card" style="border-color:var(--red)">
+        <h3>Send Transaction</h3>
+        <div class="form-row">
+          <label>From Wallet</label>
+          <select id="send-wallet-select"></select>
+        </div>
+        <div class="form-row">
+          <label>Recipient Address</label>
+          <input id="send-address" placeholder="bcrt1q… (regtest address)" />
+        </div>
+        <div class="form-row">
+          <label>Amount (BTC)</label>
+          <input id="send-amount" type="number" step="0.00000001" placeholder="0.001" />
+        </div>
+        <div class="form-row">
+          <label>Memo (optional)</label>
+          <input id="send-comment" placeholder="Payment memo…" />
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-red" onclick="sendBitcoin()">⚡ Broadcast Transaction</button>
+        </div>
+        <div id="send-result" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <h3>⚠️ Regtest Tips</h3>
+        <ul style="color:var(--muted);font-size:12px;line-height:2;padding-left:16px">
+          <li>Use <span class="accent">bcrt1q…</span> addresses (regtest bech32)</li>
+          <li>Mine blocks after sending to confirm</li>
+          <li>Addresses from different wallets work</li>
+          <li>Initial wallet needs coinbase coins (mine 101 blocks)</li>
+          <li>1 BTC = 100,000,000 satoshis</li>
+        </ul>
+        <hr class="divider">
+        <h3>Quick Setup</h3>
+        <p style="color:var(--muted);font-size:11px;margin-bottom:10px">Bootstrap a fresh regtest wallet:</p>
+        <button class="btn btn-sm btn-outline" onclick="bootstrapSetup()">🚀 Auto Bootstrap</button>
+        <div id="bootstrap-result" style="margin-top:8px;font-size:11px;color:var(--green)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ RECEIVE ════════════════ -->
+  <div id="page-receive" class="page">
+    <h2>📥 Receive Bitcoin</h2>
+    <div class="grid grid-2">
+      <div class="card" style="border-color:var(--green)">
+        <h3>Generate Address</h3>
+        <div class="form-row">
+          <label>Wallet</label>
+          <select id="recv-wallet-select" onchange="generateAddress()"></select>
+        </div>
+        <div class="form-row">
+          <label>Label (optional)</label>
+          <input id="recv-label" placeholder="Invoice label…" />
+        </div>
+        <button class="btn btn-green" onclick="generateAddress()">🔑 New Address</button>
+
+        <div id="recv-address-box" style="display:none;margin-top:16px">
+          <div class="qr-box" id="recv-qr">QR</div>
+          <div class="addr-box" id="recv-addr-display">
+            <span id="recv-addr-text" style="word-break:break-all;font-size:11px"></span>
+            <button class="copy-btn" onclick="copyAddr()">📋</button>
+          </div>
+          <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px">Share this address to receive tBTC</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📋 My Addresses</h3>
+        <div id="my-addresses">
+          <div class="empty">Select a wallet to see addresses</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ UTXOs ════════════════ -->
+  <div id="page-utxo" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2>🧱 UTXO Set</h2>
+      <div style="display:flex;gap:8px">
+        <select id="utxo-wallet-select" onchange="loadUTXOs()" style="width:160px"></select>
+        <button class="btn btn-sm btn-outline" onclick="loadUTXOs()">↺</button>
+      </div>
+    </div>
+    <div class="grid grid-3 section">
+      <div class="card">
+        <div class="card-title">Total UTXOs</div>
+        <div class="stat-val accent" id="utxo-count">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Total Value</div>
+        <div class="stat-val green" id="utxo-total">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Confirmed</div>
+        <div class="stat-val blue" id="utxo-confirmed">—</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>TXID</th><th>Vout</th><th>Address</th><th>Amount (BTC)</th><th>Confs</th><th>Spendable</th>
+        </tr></thead>
+        <tbody id="utxo-tbody"><tr><td colspan="6" class="empty">Select a wallet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════ CLI ════════════════ -->
+  <div id="page-cli" class="page">
+    <div id="cli-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <h2 style="margin:0">⌨️ Bitcoin Core CLI</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm btn-outline" onclick="clearCLI()">Clear</button>
+          <button class="btn btn-sm btn-outline" onclick="cliHelp()">Help</button>
+        </div>
+      </div>
+
+      <div class="cli-shortcuts">
+        <span class="cli-shortcut" onclick="cliRun('getblockchaininfo')">getblockchaininfo</span>
+        <span class="cli-shortcut" onclick="cliRun('getmempoolinfo')">getmempoolinfo</span>
+        <span class="cli-shortcut" onclick="cliRun('getnetworkinfo')">getnetworkinfo</span>
+        <span class="cli-shortcut" onclick="cliRun('getwalletinfo')">getwalletinfo</span>
+        <span class="cli-shortcut" onclick="cliRun('getbalance')">getbalance</span>
+        <span class="cli-shortcut" onclick="cliRun('listwallets')">listwallets</span>
+        <span class="cli-shortcut" onclick="cliRun('listunspent')">listunspent</span>
+        <span class="cli-shortcut" onclick="cliRun('getrawmempool true')">getrawmempool true</span>
+        <span class="cli-shortcut" onclick="cliRun('getpeerinfo')">getpeerinfo</span>
+        <span class="cli-shortcut" onclick="cliRun('getmininginfo')">getmininginfo</span>
+        <span class="cli-shortcut" onclick="cliRun('uptime')">uptime</span>
+        <span class="cli-shortcut" onclick="cliRun('getbestblockhash')">getbestblockhash</span>
+        <span class="cli-shortcut" onclick="cliRun('listreceivedbyaddress 0 true')">listreceivedbyaddress</span>
+        <span class="cli-shortcut" onclick="cliRun('listtransactions * 10')">listtransactions</span>
+        <span class="cli-shortcut" onclick="cliRun('getnewaddress')">getnewaddress</span>
+        <span class="cli-shortcut" onclick="cliRun('getblockcount')">getblockcount</span>
+        <span class="cli-shortcut" onclick="cliRun('validateaddress')">validateaddress</span>
+        <span class="cli-shortcut" onclick="cliRun('getdifficulty')">getdifficulty</span>
+        <span class="cli-shortcut" onclick="cliRun('getconnectioncount')">getconnectioncount</span>
+        <span class="cli-shortcut" onclick="cliRun('getblocktemplate')">getblocktemplate</span>
+        <span class="cli-shortcut" onclick="cliRun('estimatesmartfee 6')">estimatesmartfee 6</span>
+        <span class="cli-shortcut" onclick="cliRun('listaddressgroupings')">listaddressgroupings</span>
+      </div>
+
+      <div class="cli-prompt">
+        <label>Wallet context:</label>
+        <select id="cli-wallet-select" style="width:160px">
+          <option value="">— none —</option>
+        </select>
+        <span style="color:var(--muted);font-size:11px;margin-left:8px">Set wallet for wallet-specific commands</span>
+      </div>
+
+      <div id="cli-output">
+        <div class="cli-line cli-info">Bitcoin Core RPC Terminal</div>
+        <div class="cli-line cli-info">Type any bitcoin-cli command (without "bitcoin-cli"). Press Enter or click Run.</div>
+        <div class="cli-line cli-info">Example: <span class="accent">getblockchaininfo</span> or <span class="accent">getnewaddress "myLabel"</span></div>
+        <div class="cli-line cli-info">────────────────────────────────────────────────────────────────</div>
+      </div>
+
+      <div id="cli-form" style="display:flex;gap:8px">
+        <span style="color:var(--accent);line-height:38px;font-size:14px">$</span>
+        <input id="cli-input" placeholder="getblockchaininfo" onkeydown="cliKeydown(event)" autocomplete="off" spellcheck="false" />
+        <button class="btn" onclick="cliSubmit()">Run</button>
+      </div>
+    </div>
+  </div>
+
+  </main>
+</div>
+
+<!-- Notification container -->
+<div id="notif"></div>
+
+<script>
+const API = 'http://localhost:3001/api';
+let currentWallet = '';
+let cliHistory = [];
+let cliHistoryIdx = -1;
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+async function req(path, opts = {}) {
+  const res = await fetch(API + path, opts);
+  return res.json();
+}
+async function post(path, body) {
+  return req(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+
+function notify(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = 'notif' + (type === 'err' ? ' err' : type === 'warn' ? ' warn' : '');
+  el.textContent = msg;
+  document.getElementById('notif').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function fmt(ts) { return new Date(ts * 1000).toLocaleString(); }
+function fmtAge(s) { return s < 60 ? s + 's' : s < 3600 ? Math.floor(s/60) + 'm' : Math.floor(s/3600) + 'h'; }
+function shortHash(h) { return h ? h.slice(0, 12) + '…' + h.slice(-8) : '—'; }
+function copyText(t) { navigator.clipboard.writeText(t).then(() => notify('Copied!')); }
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b => {
+    if (b.textContent.toLowerCase().includes(id)) b.classList.add('active');
+  });
+  // Lazy loads
+  if (id === 'explorer') loadBlocks();
+  if (id === 'mempool') loadMempool();
+  if (id === 'wallet') loadWalletPage();
+  if (id === 'send') populateSendWallets();
+  if (id === 'receive') populateRecvWallets();
+  if (id === 'utxo') populateUTXOWallets();
+}
+
+// ── Status Check ───────────────────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const data = await req('/health');
+    const dot = document.getElementById('status-dot');
+    const txt = document.getElementById('status-text');
+    if (data.status === 'connected') {
+      dot.className = 'ok';
+      txt.textContent = `${data.chain} · block ${data.blocks}`;
+    } else {
+      dot.className = '';
+      txt.textContent = 'Disconnected';
+    }
+  } catch { document.getElementById('status-dot').className = ''; }
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const { info, mempool } = await req('/blockchain');
+    document.getElementById('d-height').textContent = info.blocks.toLocaleString();
+    document.getElementById('d-chain').textContent = 'chain: ' + info.chain;
+    document.getElementById('d-mempool-count').textContent = mempool.size;
+    document.getElementById('d-mempool-size').textContent = (mempool.bytes / 1024).toFixed(1) + ' KB';
+    document.getElementById('d-difficulty').textContent = info.difficulty.toFixed(6);
+    document.getElementById('d-verify').textContent = (info.verificationprogress * 100).toFixed(2) + '%';
+    document.getElementById('d-pruned').textContent = info.pruned ? 'pruned node' : 'full node';
+  } catch (e) { console.warn('dashboard:', e.message); }
+
+  try {
+    const blocks = await req('/blocks?count=5');
+    const el = document.getElementById('d-latest-blocks');
+    if (!blocks.length) { el.innerHTML = '<div class="empty">No blocks yet — mine some!</div>'; return; }
+    el.innerHTML = blocks.map(b => `
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span class="accent">#${b.height}</span>
+        <span class="mono hash" onclick="copyText('${b.hash}')" title="${b.hash}">${shortHash(b.hash)}</span>
+        <span class="muted">${b.txCount} tx</span>
+        <span class="muted">${fmt(b.time).split(',')[1]?.trim() || ''}</span>
+      </div>`).join('');
+  } catch {}
+}
+
+async function quickMine(n) {
+  const walletEl = document.getElementById('mine-wallet-select');
+  const wallet = walletEl.value || currentWallet;
+  if (!wallet) { notify('Select a wallet first', 'err'); return; }
+  try {
+    const res = await post('/mine', { blocks: n, wallet });
+    if (res.error) throw new Error(res.error);
+    document.getElementById('mine-result').textContent = `✅ Mined ${res.blocks} blocks → ${res.address.slice(0,20)}…`;
+    notify(`Mined ${res.blocks} block(s)!`);
+    loadDashboard();
+    checkStatus();
+  } catch (e) { notify(e.message, 'err'); }
+}
+async function quickMineCustom() {
+  const n = parseInt(document.getElementById('mine-custom-n').value) || 1;
+  quickMine(n);
+}
+
+// ── Explorer ───────────────────────────────────────────────────────────────
+async function loadBlocks() {
+  const tbody = document.getElementById('blocks-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" class="empty"><span class="loader"></span></td></tr>';
+  try {
+    const blocks = await req('/blocks?count=15');
+    if (!blocks.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No blocks — mine some!</td></tr>'; return; }
+    tbody.innerHTML = blocks.map(b => `<tr>
+      <td class="accent">${b.height}</td>
+      <td><span class="hash mono" onclick="exploreLookupHash('${b.hash}')" title="${b.hash}">${shortHash(b.hash)}</span></td>
+      <td class="muted">${fmt(b.time)}</td>
+      <td><span class="pill pill-blue">${b.txCount}</span></td>
+      <td class="muted">${(b.size/1024).toFixed(1)} KB</td>
+    </tr>`).join('');
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="5" class="red">${e.message}</td></tr>`; }
+}
+
+async function explorerLookup() {
+  exploreLookupHash(document.getElementById('explorer-query').value.trim());
+}
+async function exploreLookupHash(query) {
+  if (!query) return;
+  document.getElementById('explorer-query').value = query;
+  const el = document.getElementById('explorer-result');
+  el.innerHTML = '<span class="loader"></span>';
+  // Try block first, then tx
+  try {
+    const data = await req('/block/' + query);
+    renderBlock(data, el);
+    return;
+  } catch {}
+  try {
+    const data = await req('/tx/' + query);
+    renderTx(data, el);
+    return;
+  } catch {}
+  el.innerHTML = '<div class="card red">Not found. Make sure the hash/height is correct.</div>';
+}
+
+function renderBlock(b, el) {
+  const coinbase = b.tx?.[0];
+  el.innerHTML = `
+    <div class="card section" style="border-color:var(--accent)">
+      <h2>📦 Block #${b.height}</h2>
+      <div class="grid grid-2" style="font-size:12px;gap:8px">
+        <div><label>Hash</label><div class="mono muted" style="word-break:break-all">${b.hash}</div></div>
+        <div><label>Previous</label><div class="mono muted hash" onclick="exploreLookupHash('${b.previousblockhash}')">${shortHash(b.previousblockhash)}</div></div>
+        <div><label>Time</label><div>${fmt(b.time)}</div></div>
+        <div><label>Merkle Root</label><div class="mono muted" style="font-size:10px;word-break:break-all">${b.merkleroot}</div></div>
+        <div><label>Transactions</label><div class="accent">${b.nTx}</div></div>
+        <div><label>Size / Weight</label><div>${b.size} B / ${b.weight}</div></div>
+        <div><label>Version</label><div>${b.version}</div></div>
+        <div><label>Difficulty</label><div>${b.difficulty}</div></div>
+        <div><label>Nonce</label><div>${b.nonce}</div></div>
+        <div><label>Bits</label><div>${b.bits}</div></div>
+      </div>
+      ${b.tx?.length ? `<hr class="divider"><h3>Transactions (${b.tx.length})</h3>
+      <div style="max-height:200px;overflow-y:auto">
+        ${b.tx.map(t => `<div style="padding:4px 0;border-bottom:1px solid var(--border)">
+          <span class="hash blue" onclick="exploreLookupHash('${t.txid}')">${t.txid}</span>
+          <span class="muted" style="margin-left:12px;font-size:11px">${t.vout?.reduce((a,v)=>a+v.value,0).toFixed(8)} BTC</span>
+        </div>`).join('')}
+      </div>` : ''}
+    </div>`;
+}
+
+function renderTx(tx, el) {
+  const totalOut = tx.vout?.reduce((a, v) => a + v.value, 0) || 0;
+  el.innerHTML = `
+    <div class="card section" style="border-color:var(--blue)">
+      <h2>💸 Transaction</h2>
+      <div class="grid grid-2" style="font-size:12px;gap:8px;margin-bottom:12px">
+        <div style="grid-column:1/-1"><label>TXID</label><div class="mono muted" style="word-break:break-all">${tx.txid}</div></div>
+        <div><label>Block Hash</label><div class="hash mono blue" onclick="exploreLookupHash('${tx.blockhash}')">${shortHash(tx.blockhash)}</div></div>
+        <div><label>Confirmations</label><div class="${tx.confirmations ? 'green' : 'accent'}">${tx.confirmations || 0}</div></div>
+        <div><label>Size</label><div>${tx.size} bytes</div></div>
+        <div><label>Total Output</label><div class="green">${totalOut.toFixed(8)} BTC</div></div>
+      </div>
+      <div class="grid grid-2" style="gap:16px">
+        <div>
+          <h3>Inputs (${tx.vin?.length})</h3>
+          ${tx.vin?.map(i => `<div style="padding:6px;background:var(--bg3);border-radius:4px;margin-bottom:6px;font-size:11px">
+            ${i.coinbase ? '<span class="pill pill-orange">COINBASE</span>' : `<span class="mono muted">${shortHash(i.txid)}</span>:${i.vout}`}
+          </div>`).join('')}
+        </div>
+        <div>
+          <h3>Outputs (${tx.vout?.length})</h3>
+          ${tx.vout?.map(o => `<div style="padding:6px;background:var(--bg3);border-radius:4px;margin-bottom:6px;font-size:11px;display:flex;justify-content:space-between">
+            <span class="mono muted">${o.scriptPubKey?.address || o.scriptPubKey?.type}</span>
+            <span class="green">${o.value.toFixed(8)}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Mempool ────────────────────────────────────────────────────────────────
+async function loadMempool() {
+  const tbody = document.getElementById('mempool-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty"><span class="loader"></span></td></tr>';
+  try {
+    const data = await req('/mempool');
+    document.getElementById('mp-count').textContent = data.count;
+    let totalFee = 0;
+    let totalSz = 0;
+    data.transactions.forEach(t => { totalFee += t.fees?.base || 0; totalSz += t.vsize || t.size || 0; });
+    document.getElementById('mp-size').textContent = (totalSz / 1024).toFixed(2) + ' KB';
+    document.getElementById('mp-fees').textContent = totalFee.toFixed(8) + ' BTC';
+    if (!data.transactions.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Mempool is empty — send a transaction!</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.transactions.map(t => {
+      const feeRate = t.fees?.base && t.vsize ? ((t.fees.base * 1e8) / t.vsize).toFixed(1) : '—';
+      const age = t.time ? fmtAge(Math.floor(Date.now()/1000) - t.time) : '—';
+      return `<tr>
+        <td><span class="hash mono blue" onclick="exploreLookupHash('${t.txid}')" title="${t.txid}">${shortHash(t.txid)}</span></td>
+        <td class="accent">${(t.fees?.base || 0).toFixed(8)}</td>
+        <td>${feeRate}</td>
+        <td>${t.vsize || t.size || '—'}</td>
+        <td class="muted">${age}</td>
+        <td>${t.depends?.length || 0}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="6" class="red">${e.message}</td></tr>`; }
+}
+
+// ── Wallets shared helpers ─────────────────────────────────────────────────
+async function loadWallets() {
+  try {
+    const wallets = await req('/wallets');
+    const selectors = ['wallet-select','send-wallet-select','recv-wallet-select',
+                       'utxo-wallet-select','mine-wallet-select','cli-wallet-select'];
+    selectors.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const cur = el.value;
+      el.innerHTML = id === 'cli-wallet-select'
+        ? '<option value="">— none —</option>'
+        : '';
+      wallets.forEach(w => {
+        const opt = document.createElement('option');
+        opt.value = w; opt.textContent = w;
+        el.appendChild(opt);
+      });
+      if (cur && wallets.includes(cur)) el.value = cur;
+      else if (wallets.length) { el.value = wallets[0]; }
+    });
+    if (!currentWallet && wallets.length) currentWallet = wallets[0];
+    return wallets;
+  } catch { return []; }
+}
+
+async function createWallet() {
+  const name = document.getElementById('new-wallet-name').value.trim();
+  if (!name) { notify('Enter wallet name', 'warn'); return; }
+  const res = await post('/wallet/create', { name });
+  if (res.error) { notify(res.error, 'err'); return; }
+  notify(`Wallet "${name}" created!`);
+  document.getElementById('new-wallet-name').value = '';
+  await loadWallets();
+}
+
+function onWalletChange() {
+  currentWallet = document.getElementById('wallet-select').value;
+  loadWalletPage();
+}
+
+// ── Wallet Page ────────────────────────────────────────────────────────────
+async function loadWalletPage() {
+  const wallet = document.getElementById('wallet-select')?.value || currentWallet;
+  if (!wallet) return;
+  try {
+    const { balance, info, addresses } = await req('/wallet/' + wallet + '/info');
+    document.getElementById('w-balance').textContent = balance.toFixed(8) + ' BTC';
+    document.getElementById('w-unconfirmed').textContent =
+      'Unconfirmed: ' + (info.unconfirmed_balance || 0).toFixed(8) + ' BTC';
+    document.getElementById('w-info').innerHTML = `
+      <div>Name: <span class="text">${info.walletname}</span></div>
+      <div>Version: <span class="muted">${info.walletversion}</span></div>
+      <div>Tx Count: <span class="blue">${info.txcount}</span></div>
+      <div>Keys: <span class="muted">${info.keypoolsize || 0} in pool</span></div>`;
+  } catch {}
+  loadWalletTx(wallet);
+}
+
+async function loadWalletTx(wallet) {
+  const tbody = document.getElementById('w-tx-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty"><span class="loader"></span></td></tr>';
+  try {
+    const txs = await req('/wallet/' + wallet + '/transactions');
+    if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No transactions yet</td></tr>'; return; }
+    tbody.innerHTML = txs.map(t => {
+      const isIn = t.category === 'receive' || t.category === 'generate' || t.category === 'immature';
+      return `<tr>
+        <td><span class="pill ${isIn ? 'pill-green' : 'pill-red'}">${t.category}</span></td>
+        <td class="${isIn ? 'green' : 'red'}">${(isIn?'+':'')}${t.amount.toFixed(8)}</td>
+        <td class="mono muted" style="font-size:10px">${t.address ? t.address.slice(0,22)+'…' : '—'}</td>
+        <td><span class="pill ${t.confirmations > 0 ? 'pill-green' : 'pill-orange'}">${t.confirmations}</span></td>
+        <td><span class="hash mono blue" onclick="exploreLookupHash('${t.txid}')">${shortHash(t.txid)}</span></td>
+        <td class="muted">${t.time ? fmt(t.time) : '—'}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="6" class="red">${e.message}</td></tr>`; }
+}
+
+// ── Send ───────────────────────────────────────────────────────────────────
+function populateSendWallets() { loadWallets(); }
+
+async function sendBitcoin() {
+  const wallet = document.getElementById('send-wallet-select').value;
+  const address = document.getElementById('send-address').value.trim();
+  const amount = document.getElementById('send-amount').value;
+  const comment = document.getElementById('send-comment').value;
+  const resultEl = document.getElementById('send-result');
+
+  if (!wallet || !address || !amount) {
+    notify('Fill in wallet, address and amount', 'warn'); return;
+  }
+
+  resultEl.innerHTML = '<span class="loader"></span> Broadcasting…';
+  try {
+    const res = await post('/wallet/' + wallet + '/send', { address, amount, comment });
+    if (res.error) throw new Error(res.error);
+    resultEl.innerHTML = `
+      <div style="background:rgba(0,214,143,.1);border:1px solid var(--green);border-radius:6px;padding:12px;margin-top:8px">
+        <div class="green" style="font-weight:bold;margin-bottom:6px">✅ Transaction Broadcast!</div>
+        <div style="font-size:11px;color:var(--muted)">TXID:</div>
+        <div class="mono" style="font-size:11px;word-break:break-all;color:var(--blue);cursor:pointer" onclick="exploreLookupHash('${res.txid}')">${res.txid}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">⚠️ Mine at least 1 block to confirm</div>
+      </div>`;
+    notify('Transaction sent!');
+    // Clear form
+    document.getElementById('send-address').value = '';
+    document.getElementById('send-amount').value = '';
+    document.getElementById('send-comment').value = '';
+  } catch (e) {
+    resultEl.innerHTML = `<div style="color:var(--red);padding:10px;background:rgba(255,71,87,.1);border-radius:6px;border:1px solid var(--red)">${e.message}</div>`;
+    notify(e.message, 'err');
+  }
+}
+
+async function bootstrapSetup() {
+  const el = document.getElementById('bootstrap-result');
+  el.textContent = 'Working…';
+  try {
+    const wallets = await req('/wallets');
+    let w = wallets[0];
+    if (!w) {
+      const r = await post('/wallet/create', { name: 'default' });
+      w = 'default';
+    }
+    const res = await post('/mine', { blocks: 101, wallet: w });
+    el.textContent = `✅ Mined 101 blocks. Wallet "${w}" now has coinbase rewards!`;
+    notify('Bootstrap complete! 101 blocks mined.');
+    loadDashboard(); checkStatus(); loadWallets();
+  } catch (e) { el.textContent = '❌ ' + e.message; }
+}
+
+// ── Receive ────────────────────────────────────────────────────────────────
+function populateRecvWallets() { loadWallets().then(() => loadMyAddresses()); }
+
+async function generateAddress() {
+  const wallet = document.getElementById('recv-wallet-select').value;
+  const label = document.getElementById('recv-label').value;
+  if (!wallet) { notify('Select wallet', 'warn'); return; }
+  try {
+    const res = await post('/wallet/' + wallet + '/newaddress', { label });
+    if (res.error) throw new Error(res.error);
+    const addr = res.address;
+    document.getElementById('recv-addr-text').textContent = addr;
+    document.getElementById('recv-qr').textContent = addr;
+    document.getElementById('recv-address-box').style.display = 'block';
+    loadMyAddresses();
+    notify('New address generated!');
+  } catch (e) { notify(e.message, 'err'); }
+}
+function copyAddr() { copyText(document.getElementById('recv-addr-text').textContent); }
+
+async function loadMyAddresses() {
+  const wallet = document.getElementById('recv-wallet-select')?.value;
+  if (!wallet) return;
+  try {
+    const { addresses } = await req('/wallet/' + wallet + '/info');
+    const el = document.getElementById('my-addresses');
+    if (!addresses?.length) { el.innerHTML = '<div class="empty">No addresses yet</div>'; return; }
+    el.innerHTML = addresses.slice(0, 15).map(a => `
+      <div class="addr-box" style="margin-bottom:6px">
+        <span style="font-size:10px;word-break:break-all;flex:1">${a.address}</span>
+        <span class="green" style="font-size:10px;white-space:nowrap">${a.amount.toFixed(4)} BTC</span>
+        <button class="copy-btn" onclick="copyText('${a.address}')">📋</button>
+      </div>`).join('');
+  } catch {}
+}
+
+// ── UTXOs ──────────────────────────────────────────────────────────────────
+function populateUTXOWallets() { loadWallets().then(loadUTXOs); }
+async function loadUTXOs() {
+  const wallet = document.getElementById('utxo-wallet-select').value;
+  if (!wallet) return;
+  const tbody = document.getElementById('utxo-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty"><span class="loader"></span></td></tr>';
+  try {
+    const utxos = await req('/wallet/' + wallet + '/utxos');
+    document.getElementById('utxo-count').textContent = utxos.length;
+    const total = utxos.reduce((a,u) => a + u.amount, 0);
+    document.getElementById('utxo-total').textContent = total.toFixed(8) + ' BTC';
+    document.getElementById('utxo-confirmed').textContent = utxos.filter(u => u.confirmations > 0).length;
+    if (!utxos.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No UTXOs — receive or mine some Bitcoin!</td></tr>'; return; }
+    tbody.innerHTML = utxos.map(u => `<tr>
+      <td><span class="hash mono blue" onclick="exploreLookupHash('${u.txid}')" title="${u.txid}">${shortHash(u.txid)}</span></td>
+      <td class="muted">${u.vout}</td>
+      <td class="mono muted" style="font-size:10px">${u.address?.slice(0,22)}…</td>
+      <td class="green">${u.amount.toFixed(8)}</td>
+      <td><span class="pill ${u.confirmations > 0 ? 'pill-green' : 'pill-orange'}">${u.confirmations}</span></td>
+      <td><span class="pill ${u.spendable ? 'pill-green' : 'pill-red'}">${u.spendable ? 'Yes' : 'No'}</span></td>
+    </tr>`).join('');
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="6" class="red">${e.message}</td></tr>`; }
+}
+
+// ── CLI ────────────────────────────────────────────────────────────────────
+function cliAppend(html) {
+  const el = document.getElementById('cli-output');
+  el.insertAdjacentHTML('beforeend', html);
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearCLI() {
+  document.getElementById('cli-output').innerHTML =
+    '<div class="cli-line cli-info">Terminal cleared. Type a command below.</div>';
+}
+
+function cliHelp() {
+  cliAppend(`
+    <div class="cli-line cli-info">── Common Bitcoin Core RPC Commands ──────────────────────────────────</div>
+    <div class="cli-line cli-info"><span class="accent">Blockchain:</span> getblockchaininfo, getblockcount, getbestblockhash, getblock &lt;hash&gt;</div>
+    <div class="cli-line cli-info"><span class="accent">Mempool:</span> getmempoolinfo, getrawmempool, getrawmempool true, getmempoolentry &lt;txid&gt;</div>
+    <div class="cli-line cli-info"><span class="accent">Network:</span> getnetworkinfo, getpeerinfo, getconnectioncount</div>
+    <div class="cli-line cli-info"><span class="accent">Wallet:</span> getwalletinfo, getbalance, getnewaddress, listtransactions, listunspent</div>
+    <div class="cli-line cli-info"><span class="accent">Mining:</span> getmininginfo, generatetoaddress &lt;n&gt; &lt;addr&gt;, getblocktemplate</div>
+    <div class="cli-line cli-info"><span class="accent">Tx:</span> getrawtransaction &lt;txid&gt; true, sendtoaddress &lt;addr&gt; &lt;amt&gt;</div>
+    <div class="cli-line cli-info">──────────────────────────────────────────────────────────────────────</div>`);
+}
+
+function cliRun(cmd) {
+  document.getElementById('cli-input').value = cmd;
+  cliSubmit();
+}
+
+function cliKeydown(e) {
+  if (e.key === 'Enter') { e.preventDefault(); cliSubmit(); }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (cliHistoryIdx < cliHistory.length - 1) {
+      cliHistoryIdx++;
+      document.getElementById('cli-input').value = cliHistory[cliHistoryIdx];
+    }
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (cliHistoryIdx > 0) {
+      cliHistoryIdx--;
+      document.getElementById('cli-input').value = cliHistory[cliHistoryIdx];
+    } else { cliHistoryIdx = -1; document.getElementById('cli-input').value = ''; }
+  }
+}
+
+async function cliSubmit() {
+  const input = document.getElementById('cli-input');
+  const cmd = input.value.trim();
+  if (!cmd) return;
+  const wallet = document.getElementById('cli-wallet-select')?.value || '';
+
+  cliHistory.unshift(cmd);
+  cliHistoryIdx = -1;
+  input.value = '';
+
+  const prompt = wallet ? `[${wallet}] $ ` : '$ ';
+  cliAppend(`<div class="cli-line"><span class="cli-cmd">${prompt}${escHtml(cmd)}</span></div>`);
+
+  try {
+    const res = await post('/cli', { command: cmd, wallet: wallet || undefined });
+    if (res.error) {
+      cliAppend(`<div class="cli-line cli-err">Error: ${escHtml(res.error)}</div>`);
+    } else {
+      const formatted = JSON.stringify(res.result, null, 2);
+      cliAppend(`<div class="cli-line cli-res">${escHtml(formatted)}</div>`);
+    }
+  } catch (e) {
+    cliAppend(`<div class="cli-line cli-err">Network error: ${escHtml(e.message)}</div>`);
+  }
+  document.getElementById('cli-output').scrollTop = 9999;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  await checkStatus();
+  await loadWallets();
+  loadDashboard();
+  // Auto-refresh
+  setInterval(checkStatus, 10000);
+  setInterval(() => {
+    const active = document.querySelector('.page.active');
+    if (!active) return;
+    if (active.id === 'page-dashboard') loadDashboard();
+    if (active.id === 'page-mempool') loadMempool();
+  }, 15000);
+}
+init();
+</script>
+</body>
+</html>
