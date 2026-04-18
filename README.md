@@ -189,6 +189,90 @@ frontend/index.html
 
 ---
 
+## 🌐 Running on Testnet (Optional)
+
+This project can also be used with the **Bitcoin Testnet** instead of Regtest.
+
+However, unlike Regtest, Testnet requires syncing the blockchain, which can take significant time.
+
+---
+
+### ⏳ Initial Setup Time
+
+* Full sync: **5–15 days** (depending on system and network speed)
+* Disk space required:
+
+  * Full node: ~**100–150 GB**
+  * Pruned node: ~**5–10 GB** (recommended)
+
+---
+
+### ⚙️ Testnet Configuration
+
+Update your `bitcoin.conf`:
+
+```conf
+server=1
+txindex=1
+
+[test]
+rpcuser=bitcoin
+rpcpassword=bitcoin123
+rpcport=18332
+rpcallowip=127.0.0.1
+```
+
+(Optional) To reduce storage usage, you can enable pruning:
+
+```conf
+prune=550
+```
+
+---
+
+### ▶️ Start Bitcoin in Testnet Mode
+
+```bash
+bitcoin-qt.exe -testnet
+```
+
+Or with a custom data directory:
+
+```bash
+bitcoin-qt.exe -testnet -datadir=D:\file-path\data
+```
+
+---
+
+### 🔧 Backend Changes
+
+Update your `.env` file:
+
+```env
+RPC_PORT=18332
+```
+
+No other changes are required if your backend uses environment variables.
+
+---
+
+### ⚠️ Limitations on Testnet
+
+* Mining RPC calls (e.g., `generatetoaddress`) are only available in regtest
+* The `/api/mine` endpoint will not work on testnet
+* Coins must be obtained using **testnet faucets**
+* Transaction confirmations are slower compared to regtest
+* Performance may be slower due to real network conditions
+
+---
+
+### 💡 Recommendation
+
+For learning and experimentation, **Regtest is strongly recommended**.
+Testnet is useful if you want to simulate a more realistic network environment.
+
+---
+
 ## 👤 Author
 
 Atif Azeem
