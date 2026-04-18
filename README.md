@@ -42,11 +42,11 @@ It includes:
 
 ### Dashboard
 
-![Dashboard](assets/dashboard.png)
+![Dashboard](assets/Dashboard.png)
 
 ### Explorer
 
-![Explorer](assets/explorer.png)
+![Explorer](assets/Explorer.png)
 
 ### Wallet
 
