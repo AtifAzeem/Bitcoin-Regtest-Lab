@@ -101,6 +101,7 @@ rpcallowip=127.0.0.1
 (Optional) If transactions fail due to fee estimation, add:
 ```conf
 fallbackfee=0.0001
+```
 ---
 
 ## 3️⃣ Start Bitcoin in Regtest Mode
